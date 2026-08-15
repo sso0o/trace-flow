@@ -7,7 +7,70 @@ export function traceFrom(project: TraceProject, query: string, options: TraceOp
   return buildNode(project, root, maxDepth, new Set());
 }
 
-function findSymbol(symbols: TraceSymbol[], query: string): TraceSymbol {
+/**
+ * Traces both directions from the matched symbol: upward through its callers
+ * (top-most caller first) and downward through everything it calls. Returns
+ * one root TraceNode per distinct top-most caller chain; a symbol with no
+ * callers returns a single root equivalent to traceFrom's result.
+ */
+export function traceFull(project: TraceProject, query: string, options: TraceOptions = {}): TraceNode[] {
+  const root = findSymbol(project.symbols, query);
+  const maxDepth = options.maxDepth ?? 10;
+
+  const ancestorChains = ancestorChainsFor(project, root, maxDepth, new Set([root.id]));
+
+  if (ancestorChains.length === 0) {
+    return [buildNode(project, root, maxDepth, new Set())];
+  }
+
+  return ancestorChains.map((chain) => {
+    const descendantSeen = new Set(chain.map((symbol) => symbol.id));
+    const rootNode = buildNode(project, root, maxDepth, descendantSeen);
+    return wrapWithCallers(chain, rootNode);
+  });
+}
+
+/** Ordered [topmost caller, ..., direct caller] chains leading to `symbol`, excluding `symbol` itself. */
+function ancestorChainsFor(
+  project: TraceProject,
+  symbol: TraceSymbol,
+  remainingDepth: number,
+  seen: Set<string>,
+): TraceSymbol[][] {
+  if (remainingDepth <= 0) return [];
+
+  const callers = project.edges
+    .filter((edge) => edge.to === symbol.id)
+    .map((edge) => project.symbols.find((candidate) => candidate.id === edge.from))
+    .filter((candidate): candidate is TraceSymbol => {
+      if (!candidate) return false;
+      return !seen.has(candidate.id);
+    });
+
+  const chains: TraceSymbol[][] = [];
+
+  for (const caller of callers) {
+    const nextSeen = new Set(seen);
+    nextSeen.add(caller.id);
+    const higherChains = ancestorChainsFor(project, caller, remainingDepth - 1, nextSeen);
+
+    if (higherChains.length === 0) {
+      chains.push([caller]);
+    } else {
+      for (const higher of higherChains) {
+        chains.push([...higher, caller]);
+      }
+    }
+  }
+
+  return chains;
+}
+
+function wrapWithCallers(chain: TraceSymbol[], innerNode: TraceNode): TraceNode {
+  return chain.reduceRight<TraceNode>((child, symbol) => ({ symbol, children: [child] }), innerNode);
+}
+
+export function findSymbol(symbols: TraceSymbol[], query: string): TraceSymbol {
   const exact = symbols.find((symbol) => symbol.qualifiedName === query || symbol.name === query);
   if (exact) return exact;
 
