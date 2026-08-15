@@ -4,6 +4,7 @@ import { analyzeProject, traceFrom, traceFull } from "../src/index.js";
 
 const fixturePath = path.join(import.meta.dirname, "fixtures/simple-auth");
 const nestedFixturePath = path.join(import.meta.dirname, "fixtures/nested-function");
+const objectLiteralFixturePath = path.join(import.meta.dirname, "fixtures/object-literal-service");
 
 describe("analyzeProject", () => {
   test("traces direct TypeScript calls from a class method", async () => {
@@ -32,6 +33,17 @@ describe("analyzeProject", () => {
 
     expect(trace.symbol.qualifiedName).toBe("useAdminRole");
     expect(trace.children.map((child) => child.symbol.qualifiedName)).toEqual([]);
+  });
+
+  test("traces a call to an arrow function assigned as an object literal property", async () => {
+    const project = await analyzeProject({ cwd: objectLiteralFixturePath });
+    const trace = traceFrom(project, "handleBulkOrder");
+
+    expect(trace.symbol.qualifiedName).toBe("handleBulkOrder");
+    expect(trace.children.map((child) => child.symbol.qualifiedName)).toEqual([
+      "productionOrderService.bulkCreateProductionOrders",
+    ]);
+    expect(trace.children[0]?.children.map((child) => child.symbol.qualifiedName)).toEqual(["save"]);
   });
 });
 

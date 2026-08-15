@@ -62,10 +62,32 @@ function collectSymbols(sourceFile: SourceFile, cwd: string): SymbolWithNode[] {
   for (const variable of sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
     const initializer = variable.getInitializer();
     if (!initializer) continue;
-    if (!Node.isArrowFunction(initializer) && !Node.isFunctionExpression(initializer)) continue;
 
-    const name = variable.getName();
-    symbols.push(toSymbolWithNode(initializer, name, name, "arrow", sourceFile, cwd, [variable, initializer]));
+    if (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer)) {
+      const name = variable.getName();
+      symbols.push(toSymbolWithNode(initializer, name, name, "arrow", sourceFile, cwd, [variable, initializer]));
+      continue;
+    }
+
+    if (Node.isObjectLiteralExpression(initializer)) {
+      const objectName = variable.getName();
+
+      for (const property of initializer.getProperties()) {
+        if (!Node.isPropertyAssignment(property)) continue;
+
+        const propertyInitializer = property.getInitializer();
+        if (!propertyInitializer) continue;
+        if (!Node.isArrowFunction(propertyInitializer) && !Node.isFunctionExpression(propertyInitializer)) continue;
+
+        const name = property.getName();
+        symbols.push(
+          toSymbolWithNode(propertyInitializer, name, `${objectName}.${name}`, "method", sourceFile, cwd, [
+            property,
+            propertyInitializer,
+          ]),
+        );
+      }
+    }
   }
 
   for (const classDeclaration of sourceFile.getDescendantsOfKind(SyntaxKind.ClassDeclaration)) {
