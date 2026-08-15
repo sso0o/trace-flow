@@ -4,7 +4,7 @@
   "description": "Trace TypeScript code execution flow and print it as a tree.",
   "type": "module",
   "bin": {
-    "trace-flow": "./dist/cli.js"
+    "trace-flow": "dist/cli.js"
   },
   "files": [
     "dist",
