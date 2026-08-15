@@ -189,16 +189,18 @@ function addSymbolName(map: Map<string, TraceSymbol[]>, name: string, symbol: Tr
   map.set(name, symbols);
 }
 
-function resolveCallTarget(
-  call: CallExpression,
-  context: {
-    symbolsByName: Map<string, TraceSymbol[]>;
-    symbolsByQualifiedName: Map<string, TraceSymbol>;
-    symbolsByDeclaration: Map<string, TraceSymbol>;
-    typeChecker?: TypeChecker;
-  },
-): TraceSymbol | undefined {
-  const expression = call.getExpression();
+interface ResolveContext {
+  symbolsByName: Map<string, TraceSymbol[]>;
+  symbolsByQualifiedName: Map<string, TraceSymbol>;
+  symbolsByDeclaration: Map<string, TraceSymbol>;
+  typeChecker?: TypeChecker;
+}
+
+function resolveCallTarget(call: CallExpression, context: ResolveContext): TraceSymbol | undefined {
+  return resolveExpressionTarget(call.getExpression(), context);
+}
+
+function resolveExpressionTarget(expression: Node, context: ResolveContext): TraceSymbol | undefined {
   const symbolTarget = resolveSymbolTarget(expression.getSymbol(), context);
   if (symbolTarget) return symbolTarget;
 
