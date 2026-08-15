@@ -53,13 +53,13 @@ async function addSourceFiles(project: Project, cwd: string): Promise<void> {
 function collectSymbols(sourceFile: SourceFile, cwd: string): SymbolWithNode[] {
   const symbols: SymbolWithNode[] = [];
 
-  for (const declaration of sourceFile.getFunctions()) {
+  for (const declaration of sourceFile.getDescendantsOfKind(SyntaxKind.FunctionDeclaration)) {
     const name = declaration.getName();
     if (!name) continue;
     symbols.push(toSymbolWithNode(declaration, name, name, "function", sourceFile, cwd));
   }
 
-  for (const variable of sourceFile.getVariableDeclarations()) {
+  for (const variable of sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
     const initializer = variable.getInitializer();
     if (!initializer) continue;
     if (!Node.isArrowFunction(initializer) && !Node.isFunctionExpression(initializer)) continue;
@@ -68,7 +68,7 @@ function collectSymbols(sourceFile: SourceFile, cwd: string): SymbolWithNode[] {
     symbols.push(toSymbolWithNode(initializer, name, name, "arrow", sourceFile, cwd, [variable, initializer]));
   }
 
-  for (const classDeclaration of sourceFile.getClasses()) {
+  for (const classDeclaration of sourceFile.getDescendantsOfKind(SyntaxKind.ClassDeclaration)) {
     const className = classDeclaration.getName();
     if (!className) continue;
 
