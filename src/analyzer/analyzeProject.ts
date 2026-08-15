@@ -181,7 +181,8 @@ function collectEdges(symbolsWithNodes: SymbolWithNode[]): TraceEdge[] {
       if (!expression) continue;
       if (!Node.isIdentifier(expression) && !Node.isPropertyAccessExpression(expression)) continue;
 
-      const target = resolveExpressionTarget(expression, context, { allowNameFallback: false });
+      const allowNameFallback = expression.getType().getCallSignatures().length > 0;
+      const target = resolveExpressionTarget(expression, context, { allowNameFallback });
       if (!target || target.id === symbol.id) continue;
       edges.push({ from: symbol.id, to: target.id });
     }

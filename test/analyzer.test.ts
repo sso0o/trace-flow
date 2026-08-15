@@ -7,6 +7,7 @@ const nestedFixturePath = path.join(import.meta.dirname, "fixtures/nested-functi
 const objectLiteralFixturePath = path.join(import.meta.dirname, "fixtures/object-literal-service");
 const jsxCallbackPropFixturePath = path.join(import.meta.dirname, "fixtures/jsx-callback-prop");
 const jsxAttributeNameCollisionFixturePath = path.join(import.meta.dirname, "fixtures/jsx-attribute-name-collision");
+const jsxCallbackPropViaHookFixturePath = path.join(import.meta.dirname, "fixtures/jsx-callback-prop-via-hook");
 
 describe("analyzeProject", () => {
   test("traces direct TypeScript calls from a class method", async () => {
@@ -62,6 +63,14 @@ describe("analyzeProject", () => {
 
     expect(trace.symbol.qualifiedName).toBe("Page");
     expect(trace.children.map((child) => child.symbol.qualifiedName)).not.toContain("count");
+  });
+
+  test("traces a JSX callback prop reference destructured from a hook's return value", async () => {
+    const project = await analyzeProject({ cwd: jsxCallbackPropViaHookFixturePath });
+    const trace = traceFrom(project, "ProdOrderPage");
+
+    expect(trace.symbol.qualifiedName).toBe("ProdOrderPage");
+    expect(trace.children.map((child) => child.symbol.qualifiedName)).toContain("handleBulkOrder");
   });
 });
 
