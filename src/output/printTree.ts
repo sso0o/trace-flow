@@ -8,7 +8,8 @@ export function printTree(node: TraceNode, highlightId?: string): string {
 function printNode(node: TraceNode, depth: number, highlightId?: string): string[] {
   const prefix = depth === 0 ? "" : `${"  ".repeat(depth)}-> `;
   const location = pc.dim(`(${node.symbol.filePath}:${node.symbol.line})`);
-  const name = node.symbol.id === highlightId ? pc.bold(node.symbol.qualifiedName) : node.symbol.qualifiedName;
+  const name =
+    node.symbol.id === highlightId ? pc.bold(pc.cyan(node.symbol.qualifiedName)) : node.symbol.qualifiedName;
   const lines = [`${prefix}${name} ${location}`];
 
   for (const child of node.children) {
