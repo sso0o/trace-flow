@@ -6,6 +6,7 @@ const fixturePath = path.join(import.meta.dirname, "fixtures/simple-auth");
 const nestedFixturePath = path.join(import.meta.dirname, "fixtures/nested-function");
 const objectLiteralFixturePath = path.join(import.meta.dirname, "fixtures/object-literal-service");
 const jsxCallbackPropFixturePath = path.join(import.meta.dirname, "fixtures/jsx-callback-prop");
+const jsxAttributeNameCollisionFixturePath = path.join(import.meta.dirname, "fixtures/jsx-attribute-name-collision");
 
 describe("analyzeProject", () => {
   test("traces direct TypeScript calls from a class method", async () => {
@@ -53,6 +54,14 @@ describe("analyzeProject", () => {
 
     expect(trace.symbol.qualifiedName).toBe("OrderPage");
     expect(trace.children.map((child) => child.symbol.qualifiedName)).toEqual(["handleBulkOrder"]);
+  });
+
+  test("does not create a false edge when a JSX attribute value shares a name with an unrelated function", async () => {
+    const project = await analyzeProject({ cwd: jsxAttributeNameCollisionFixturePath });
+    const trace = traceFrom(project, "Page");
+
+    expect(trace.symbol.qualifiedName).toBe("Page");
+    expect(trace.children.map((child) => child.symbol.qualifiedName)).not.toContain("count");
   });
 });
 

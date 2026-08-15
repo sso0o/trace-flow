@@ -181,7 +181,7 @@ function collectEdges(symbolsWithNodes: SymbolWithNode[]): TraceEdge[] {
       if (!expression) continue;
       if (!Node.isIdentifier(expression) && !Node.isPropertyAccessExpression(expression)) continue;
 
-      const target = resolveExpressionTarget(expression, context);
+      const target = resolveExpressionTarget(expression, context, { allowNameFallback: false });
       if (!target || target.id === symbol.id) continue;
       edges.push({ from: symbol.id, to: target.id });
     }
@@ -213,9 +213,15 @@ function resolveCallTarget(call: CallExpression, context: ResolveContext): Trace
   return resolveExpressionTarget(call.getExpression(), context);
 }
 
-function resolveExpressionTarget(expression: Node, context: ResolveContext): TraceSymbol | undefined {
+function resolveExpressionTarget(
+  expression: Node,
+  context: ResolveContext,
+  options: { allowNameFallback?: boolean } = {},
+): TraceSymbol | undefined {
   const symbolTarget = resolveSymbolTarget(expression.getSymbol(), context);
   if (symbolTarget) return symbolTarget;
+
+  if (options.allowNameFallback === false) return undefined;
 
   if (Node.isIdentifier(expression)) {
     return context.symbolsByName.get(expression.getText())?.[0];
