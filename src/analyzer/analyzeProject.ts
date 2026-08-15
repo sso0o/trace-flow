@@ -148,6 +148,7 @@ function collectEdges(symbolsWithNodes: SymbolWithNode[]): TraceEdge[] {
     }
   }
 
+  const context: ResolveContext = { symbolsByName, symbolsByQualifiedName, symbolsByDeclaration, typeChecker };
   const edges: TraceEdge[] = [];
 
   for (const { node, symbol } of symbolsWithNodes) {
@@ -160,15 +161,27 @@ function collectEdges(symbolsWithNodes: SymbolWithNode[]): TraceEdge[] {
       )
       .map(({ node: nestedNode }) => nestedNode);
 
-    for (const call of node.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-      if (nestedNodes.some((nestedNode) => isContainedIn(call, nestedNode))) continue;
+    const isNested = (candidate: Node) => nestedNodes.some((nestedNode) => isContainedIn(candidate, nestedNode));
 
-      const target = resolveCallTarget(call, {
-        symbolsByName,
-        symbolsByQualifiedName,
-        symbolsByDeclaration,
-        typeChecker,
-      });
+    for (const call of node.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+      if (isNested(call)) continue;
+
+      const target = resolveCallTarget(call, context);
+      if (!target || target.id === symbol.id) continue;
+      edges.push({ from: symbol.id, to: target.id });
+    }
+
+    for (const attribute of node.getDescendantsOfKind(SyntaxKind.JsxAttribute)) {
+      if (isNested(attribute)) continue;
+
+      const initializer = attribute.getInitializer();
+      if (!initializer || !Node.isJsxExpression(initializer)) continue;
+
+      const expression = initializer.getExpression();
+      if (!expression) continue;
+      if (!Node.isIdentifier(expression) && !Node.isPropertyAccessExpression(expression)) continue;
+
+      const target = resolveExpressionTarget(expression, context);
       if (!target || target.id === symbol.id) continue;
       edges.push({ from: symbol.id, to: target.id });
     }

@@ -5,6 +5,7 @@ import { analyzeProject, traceFrom, traceFull } from "../src/index.js";
 const fixturePath = path.join(import.meta.dirname, "fixtures/simple-auth");
 const nestedFixturePath = path.join(import.meta.dirname, "fixtures/nested-function");
 const objectLiteralFixturePath = path.join(import.meta.dirname, "fixtures/object-literal-service");
+const jsxCallbackPropFixturePath = path.join(import.meta.dirname, "fixtures/jsx-callback-prop");
 
 describe("analyzeProject", () => {
   test("traces direct TypeScript calls from a class method", async () => {
@@ -45,6 +46,14 @@ describe("analyzeProject", () => {
     ]);
     expect(trace.children[0]?.children.map((child) => child.symbol.qualifiedName)).toEqual(["save"]);
   });
+
+  test("traces a function passed as a JSX callback prop reference", async () => {
+    const project = await analyzeProject({ cwd: jsxCallbackPropFixturePath });
+    const trace = traceFrom(project, "OrderPage");
+
+    expect(trace.symbol.qualifiedName).toBe("OrderPage");
+    expect(trace.children.map((child) => child.symbol.qualifiedName)).toEqual(["handleBulkOrder"]);
+  });
 });
 
 describe("traceFull", () => {
@@ -68,5 +77,14 @@ describe("traceFull", () => {
     expect(rest).toHaveLength(0);
     expect(trace.symbol.qualifiedName).toBe("handleLoginRequest");
     expect(trace.children[0]?.symbol.qualifiedName).toBe("AuthController.login");
+  });
+
+  test("finds a caller that only passes the symbol as a JSX callback prop", async () => {
+    const project = await analyzeProject({ cwd: jsxCallbackPropFixturePath });
+    const [trace, ...rest] = traceFull(project, "handleBulkOrder");
+
+    expect(rest).toHaveLength(0);
+    expect(trace.symbol.qualifiedName).toBe("OrderPage");
+    expect(trace.children[0]?.symbol.qualifiedName).toBe("handleBulkOrder");
   });
 });
