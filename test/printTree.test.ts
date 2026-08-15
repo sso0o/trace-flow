@@ -14,7 +14,13 @@ describe("printTree", () => {
       ],
     };
 
-    expect(printTree(trace)).toBe(["AuthController.login", "  -> AuthService.login", "    -> issueToken"].join("\n"));
+    expect(printTree(trace)).toBe(
+      [
+        "AuthController.login (fixture.ts:1)",
+        "  -> AuthService.login (fixture.ts:1)",
+        "    -> issueToken (fixture.ts:1)",
+      ].join("\n"),
+    );
   });
 });
 
