@@ -25,6 +25,14 @@ describe("analyzeProject", () => {
     expect(trace.symbol.qualifiedName).toBe("executeUpdateRole");
     expect(trace.children.map((child) => child.symbol.qualifiedName)).toEqual(["updateAdminRole"]);
   });
+
+  test("does not attribute a nested function's calls to its enclosing function", async () => {
+    const project = await analyzeProject({ cwd: nestedFixturePath });
+    const trace = traceFrom(project, "useAdminRole");
+
+    expect(trace.symbol.qualifiedName).toBe("useAdminRole");
+    expect(trace.children.map((child) => child.symbol.qualifiedName)).toEqual([]);
+  });
 });
 
 describe("traceFull", () => {

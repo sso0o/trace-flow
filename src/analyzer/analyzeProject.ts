@@ -129,7 +129,18 @@ function collectEdges(symbolsWithNodes: SymbolWithNode[]): TraceEdge[] {
   const edges: TraceEdge[] = [];
 
   for (const { node, symbol } of symbolsWithNodes) {
+    const nestedNodes = symbolsWithNodes
+      .filter(
+        (other) =>
+          other.symbol.id !== symbol.id &&
+          other.node.getSourceFile() === node.getSourceFile() &&
+          isContainedIn(other.node, node),
+      )
+      .map(({ node: nestedNode }) => nestedNode);
+
     for (const call of node.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+      if (nestedNodes.some((nestedNode) => isContainedIn(call, nestedNode))) continue;
+
       const target = resolveCallTarget(call, {
         symbolsByName,
         symbolsByQualifiedName,
@@ -142,6 +153,12 @@ function collectEdges(symbolsWithNodes: SymbolWithNode[]): TraceEdge[] {
   }
 
   return dedupeEdges(edges);
+}
+
+/** Whether `node` falls entirely within `container`'s span (used to attribute a call to its innermost enclosing function, not every ancestor function). */
+function isContainedIn(node: Node, container: Node): boolean {
+  if (node.getSourceFile() !== container.getSourceFile()) return false;
+  return node.getStart() >= container.getStart() && node.getEnd() <= container.getEnd();
 }
 
 function addSymbolName(map: Map<string, TraceSymbol[]>, name: string, symbol: TraceSymbol): void {
